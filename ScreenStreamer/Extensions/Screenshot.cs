@@ -8,60 +8,45 @@ namespace ScreenStreamer.Extensions
 {
     public static class Screenshot
     {
-        [StructLayout(LayoutKind.Sequential)]
-        private struct CURSORINFO
+        public static Bitmap CaptureScreen(bool captureCursor)
         {
-            public int cbSize;
-            public int flags;
-            public IntPtr hCursor;
-            public POINTAPI ptScreenPos;
-        }
+            var primaryScreen = Screen.PrimaryScreen;
+            var bitmap = new Bitmap(primaryScreen.Bounds.Width, primaryScreen.Bounds.Height, PixelFormat.Format24bppRgb);
+            using var g = Graphics.FromImage(bitmap);
+            g.CopyFromScreen(0, 0, 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct POINTAPI
-        {
-            public int x;
-            public int y;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool GetCursorInfo(out CURSORINFO pci);
-
-        [DllImport("user32.dll")]
-        private static extern bool DrawIcon(IntPtr hDC, int X, int Y, IntPtr hIcon);
-
-        private const int CURSOR_SHOWING = 0x00000001;
-
-        public static Bitmap CaptureScreen(bool captureMouse)
-        {
-            var result = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height, PixelFormat.Format24bppRgb);
-
-            try
+            if (captureCursor)
             {
-                using var g = Graphics.FromImage(result);
-                g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size, CopyPixelOperation.SourceCopy);
+                User32.CURSORINFO cursorInfo;
+                cursorInfo.cbSize = Marshal.SizeOf(typeof(User32.CURSORINFO));
 
-                if (captureMouse)
+                if (User32.GetCursorInfo(out cursorInfo))
                 {
-                    CURSORINFO pci;
-                    pci.cbSize = Marshal.SizeOf(typeof(CURSORINFO));
-
-                    if (GetCursorInfo(out pci))
+                    // if the cursor is showing draw it on the screen shot
+                    if (cursorInfo.flags == User32.CURSOR_SHOWING)
                     {
-                        if (pci.flags == CURSOR_SHOWING)
+                        // we need to get hotspot so we can draw the cursor in the correct position
+                        var iconPointer = User32.CopyIcon(cursorInfo.hCursor);
+                        User32.ICONINFO iconInfo;
+                        int iconX, iconY;
+
+                        if (User32.GetIconInfo(iconPointer, out iconInfo))
                         {
-                            DrawIcon(g.GetHdc(), pci.ptScreenPos.x, pci.ptScreenPos.y, pci.hCursor);
+                            // calculate the correct position of the cursor
+                            iconX = cursorInfo.ptScreenPos.x - iconInfo.xHotspot;
+                            iconY = cursorInfo.ptScreenPos.y - iconInfo.yHotspot;
+
+                            // draw the cursor icon on top of the captured screen image
+                            User32.DrawIcon(g.GetHdc(), iconX, iconY, cursorInfo.hCursor);
+
+                            // release the handle created by call to g.GetHdc()
                             g.ReleaseHdc();
                         }
                     }
                 }
             }
-            catch
-            {
-                result = null;
-            }
 
-            return result;
+            return bitmap;
         }
     }
 }
