@@ -1,20 +1,27 @@
 ﻿using System;
 using System.Drawing;
+using Microsoft.Extensions.Configuration;
 
 namespace ScreenStreamer.Services
 {
     public class ScreenshotProviderService
     {
         private readonly IScreenshotService _screenshotService;
+
+        private readonly IConfiguration _configuration;
+
         // public Bitmap Screenshot { get; private set; }
         public Bitmap Screenshot => _screenshotService.GetScreenshot(true);
 
-        public const int Fps = 30;
-        public readonly TimeSpan DelayTime = TimeSpan.FromMilliseconds(1000D / Fps);
-        
-        public ScreenshotProviderService(IScreenshotService screenshotService)
+        public static int Fps { get; private set; }
+        public TimeSpan DelayTime { get; private set; }
+
+        public ScreenshotProviderService(IScreenshotService screenshotService, IConfiguration configuration)
         {
             _screenshotService = screenshotService;
+            _configuration = configuration;
+            Fps = _configuration.GetValue<int>("Streaming:Fps");
+            DelayTime = TimeSpan.FromMilliseconds(1000D / Fps);
             //StartUpdate();
         }
 
