@@ -11,8 +11,8 @@ namespace ScreenStreamer.Extensions
         [StructLayout(LayoutKind.Sequential)]
         private struct CURSORINFO
         {
-            public Int32 cbSize;
-            public Int32 flags;
+            public int cbSize;
+            public int flags;
             public IntPtr hCursor;
             public POINTAPI ptScreenPos;
         }

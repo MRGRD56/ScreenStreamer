@@ -43,7 +43,7 @@ namespace ScreenStreamer.Hubs
 
         public ChannelReader<string> GetScreenshotsReader(CancellationToken cancellationToken)
         {
-            var channel = Channel.CreateUnbounded<string>();
+            var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(300));
 
             _ = WriteItemsAsync(channel.Writer, cancellationToken);
 

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Text;
-using System.Threading.Tasks;
 
 namespace ScreenStreamer.Services
 {
@@ -12,7 +9,7 @@ namespace ScreenStreamer.Services
         // public Bitmap Screenshot { get; private set; }
         public Bitmap Screenshot => _screenshotService.GetScreenshot(true);
 
-        public const int Fps = 15;
+        public const int Fps = 30;
         public readonly TimeSpan DelayTime = TimeSpan.FromMilliseconds(1000D / Fps);
         
         public ScreenshotProviderService(IScreenshotService screenshotService)
