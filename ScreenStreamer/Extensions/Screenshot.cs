@@ -9,6 +9,8 @@ namespace ScreenStreamer.Extensions
 {
     public static class Screenshot
     {
+        private static readonly Font ArialFont = new(new FontFamily("Arial"), 14);
+        
         public static Bitmap CaptureScreen(bool captureCursor)
         {
             Size screenSize = default;
@@ -31,8 +33,12 @@ namespace ScreenStreamer.Extensions
             }
             catch (Exception exception)
             {
-                Debug.WriteLine(exception.ToString());
+                var exceptionText = exception.ToString();
+                Debug.WriteLine(exceptionText);
                 g.Clear(Color.Black);
+                #if DEBUG
+                g.DrawString(exceptionText, ArialFont, Brushes.White, new RectangleF(new PointF(0, 0), screenSize));
+                #endif
             }
 
             if (captureCursor)
