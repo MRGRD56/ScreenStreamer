@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -9,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using BitmapTools;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using ScreenStreamer.Extensions;
@@ -36,16 +38,43 @@ namespace ScreenStreamer.Hubs
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+
+                var screenshotStopwatch = new Stopwatch();
+                screenshotStopwatch.Start();
+                
                 var screenshot = _screenshotService.GetScreenshot(true);
+                
+                screenshotStopwatch.Stop();
+                LogTime("Screenshot taken", screenshotStopwatch.Elapsed);
+                
                 await using var screenshotStream = new MemoryStream();
-                screenshot.SaveAsJpeg(screenshotStream, _configuration.GetValue<int>("Streaming:Quality"));
+                var resolution = _configuration.GetSizeValue("Streaming:Resolution");
+                if (screenshot.Size != resolution)
+                {
+                    screenshot = screenshot.Resize(resolution);
+                }
+
+                screenshot.SaveCompressed(screenshotStream, _configuration.GetValue<int>("Streaming:Quality"));
                 var screenshotBytes = screenshotStream.ToArray();
                 var base64 = Convert.ToBase64String(screenshotBytes);
+                screenshot.Dispose();
                 var base64Source = $"data:image/jpeg;base64, {base64}";
                 yield return base64Source;
 
+                stopwatch.Stop();
+                LogTime("> Image sent", stopwatch.Elapsed);
+                
                 await Task.Delay(_screenshotProviderService.DelayTime, cancellationToken);
             }
+        }
+
+        private void LogTime(string action, TimeSpan time)
+        {
+            var elapsedSeconds = time.TotalSeconds;
+            Debug.WriteLine($"{action} in {elapsedSeconds:N3} sec - " +
+                            $"1/{Math.Round(1 / elapsedSeconds)} sec");
         }
 
         public ChannelReader<string> GetScreenshotsReader(CancellationToken cancellationToken)
